@@ -1,0 +1,50 @@
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: nbstripout
+        name: Strip Jupyter notebook output (nbstripout)
+        entry: poetry run nbstripout
+        types: [file]
+        files: (\.ipynb)$
+        language: system
+
+      - id: codespell
+        name: Check spelling with codespell
+        entry: poetry run codespell markdown
+        types: [markdown]
+        language: system
+
+      - id: export-requirements-dev
+        name: Export Poetry dev dependencies
+        entry: poetry export --with=dev --without-hashes --format=requirements.txt --output=requirements-dev.txt
+        files: ^(pyproject\.toml|poetry\.lock)$
+        language: system
+        pass_filenames: false
+
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.9
+    hooks:
+      - id: ruff
+        name: ruff fix
+        args: [--fix]
+        types_or: [python, pyi]
+
+      - id: ruff-format
+        name: ruff format
+        types_or: [python, pyi]
+
+      - id: ruff
+        name: ruff check
+        args: [--output-format, concise]
+        types_or: [python, pyi]
