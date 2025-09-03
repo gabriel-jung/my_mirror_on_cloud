@@ -22,7 +22,7 @@ pyenv local 3.12.11
 ```
 ### Package installation
 
-#### Option A: Using Poetry (Recommended for Development)
+#### Option A: Using Poetry (Recommended for Development, need version > 2.0)
 ```
 poetry env use 3.12.11
 poetry install

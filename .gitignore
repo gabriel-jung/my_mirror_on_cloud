@@ -17,4 +17,5 @@ htmlcov/
 dist/
 build/
 models/downloaded/
-data/datasets/
+data/*
+results/*
