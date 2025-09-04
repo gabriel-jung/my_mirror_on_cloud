@@ -4,10 +4,17 @@ import time
 import re
 import json
 from typing import Dict, Optional, Any
+from datetime import datetime, timezone
+
 
 import ollama
 
 from .utils import resize_and_encode_image
+
+
+model_confidence = {
+    "qwen2.5vl:7b": 0.85,
+}
 
 
 class ClothingTextAnalyzer:
@@ -300,3 +307,31 @@ def analyze_clothing_image(
             "prompt_type": prompt_type,
             "model_name": model_name,
         }
+
+
+def get_tags_from_analysis(analysis: dict) -> list:
+    """Extract tags from analysis result for database storage."""
+    common_data = {
+        "model_name": analysis["model_name"],
+        "confidence": model_confidence[analysis["model_name"]],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    if analysis["prompt_type"] == "categorized":
+        tags = [{**analysis["parsed_data"], **common_data}]
+    elif analysis["prompt_type"] == "description_only":
+        tags = [
+            {
+                "description": analysis["parsed_data"],
+                **common_data,
+            }
+        ]
+    else:
+        tags = []
+
+    return tags
+
+
+def get_processing_status(analysis: dict) -> dict:
+    """Extract processing status from analysis result for database storage."""
+    return {analysis["model_name"]: analysis["is_valid"] and analysis["success"]}
