@@ -1,7 +1,7 @@
 from .resume_client_query import reformulation_query
 from .encode_query import vectorize_query
 from .catalogue_search import get_similar_text_to_vector, weaviate_connect, connect_collection
-from .manage_language import init_lang, translate_to_en
+from .manage_language import init_language, translate_to_en
 
 def init_model():
     # Weaviate
@@ -20,8 +20,8 @@ def init_model():
 
 
 
-def search_recommended_outfit(query, collection):
-    trad_query = translate_to_en(query)
+def search_recommended_outfit(query, collection, model_lang, tokenizer_lang):
+    trad_query = translate_to_en(query, model_lang, tokenizer_lang)
     cleaned_query = reformulation_query(trad_query)
     # Need to check: il faut potentiellement cleaned the cleaned_query
     recommended_objects = get_similar_text_to_vector(cleaned_query, collection)

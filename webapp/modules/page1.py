@@ -18,6 +18,8 @@ def show():
         collections = init_model()
         st.session_state.tenues_collection = collections[0] 
         st.session_state.clothes_collection = collections[1]
+        st.session_state.model_lang = collections[2] 
+        st.session_state.tokenizer_lang = collections[3]
 
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
@@ -94,7 +96,7 @@ def show():
                 st.session_state.show_outfits = True
                 success = st.success("Profile information submitted successfully!", icon="✅")
                 # Launch search_recommended_outfit
-                result = search_recommended_outfit(query, st.session_state.tenues_collection)
+                result = search_recommended_outfit(query, st.session_state.tenues_collection, st.session_state.model_lang, st.session_state.tokenizer_lang)
                 st.write(result)
 
     if st.session_state.show_outfits :
