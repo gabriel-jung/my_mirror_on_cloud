@@ -1,0 +1,9 @@
+name: my-mirror
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12.11
+  - pip
+  - pip:
+    - -r requirements-dev.txt

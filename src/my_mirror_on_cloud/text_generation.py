@@ -228,7 +228,7 @@ def analyze_clothing_image(
     prompt_type: str = "description_only",
     model_name: str = "qwen2.5vl:7b",
     clothing_categories: Optional[Dict] = None,
-    max_width: int = 512,
+    max_width: int = 256,
     max_retries: int = 10,
 ) -> dict:
     """Complete clothing image analysis pipeline with multiple retries on invalid result."""
