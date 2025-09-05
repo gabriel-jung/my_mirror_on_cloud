@@ -5,6 +5,7 @@ import time
 
 if 'show_outfits' not in st.session_state:
     st.session_state.show_outfits = False
+if 'outfit_choice' not in st.session_state:
     st.session_state.outfit_choice = None
 
 def show():
