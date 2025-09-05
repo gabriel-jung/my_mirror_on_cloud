@@ -3,6 +3,9 @@ from datetime import datetime
 from PIL import Image
 import time 
 
+from src.my_mirror_on_cloud import pipeline
+# ou plus précis
+from src.my_mirror_on_cloud.pipeline import init_model, search_recommended_outfit
 
 
 def show():
@@ -11,6 +14,10 @@ def show():
         st.session_state.show_outfits = False
     if 'outfit_choice' not in st.session_state:
         st.session_state.outfit_choice = None
+    if 'tenues_collection' not in st.session_state:
+        collections = init_model()
+        st.session_state.tenues_collection = collections[0] 
+        st.session_state.clothes_collection = collections[1]
 
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
@@ -85,6 +92,9 @@ def show():
             if submitted:
                 st.session_state.show_outfits = True
                 success = st.success("Profile information submitted successfully!", icon="✅")
+                # Launch search_recommended_outfit
+                result = search_recommended_outfit(query, st.session_state.tenues_collection)
+                st.write(result)
 
     if st.session_state.show_outfits :
         if st.session_state.outfit_choice is None:

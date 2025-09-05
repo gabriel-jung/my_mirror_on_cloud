@@ -1,40 +1,24 @@
-import os
 from time import perf_counter
-import requests
-import numpy as np
+#from openai import OpenAI
+from mistralai import Mistral
+from .params import MISTRAL_API_KEY
 
 import loguru
 logger = loguru.logger
 
-def init_mistral_hf()-> tuple[str, dict]:
-    """
-    Initialize the Mistral model from Hugging Face.
-    output: API URL, headers
-    """
-    API_URL = "https://router.huggingface.co/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('HF_TOKEN')}",
-        #"Authorization": f"Bearer {"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"}",
-        
-    }
-    return API_URL, headers
-
-# local
-def init_mistral_ollama()-> str:
-    """
-    Initialize the Mistral model from Ollama.
-    output: API URL
-    """
-    # Make sure you have ollama installed and the Mistral model pulled
-    #!ollama pull mistral
-    #!ollama list
-    API_URL = "http://localhost:11434/api/chat"
+def llm_query_openai(role_system, user_query):
     
-    return API_URL
+    api_key = MISTRAL_API_KEY
 
-def llm_query_ollama(payload, API_URL=init_mistral_ollama()):
-    response = requests.post(API_URL, json=payload)
-    return response.json()
+    model = "mistral-small-latest"  # vérifie le modèle que tu veux
+    
+    client = Mistral(api_key=api_key)
+    chat_response = client.chat.complete(
+        model=model,
+        messages=[role_system, user_query]
+    )
+    logger.debug(chat_response.choices[0].message.content)
+    return chat_response.choices[0].message.content
 
 
 def define_role_system()-> dict:
@@ -90,21 +74,19 @@ def reformulation_query(query:str)-> str:
     logger.info(role_system)
 
     t1 = perf_counter()
-    response = llm_query_ollama({
-        "messages": [
+    response = llm_query_openai(
             role_system,
-            user_query
-        ],
-        'model': "mistral"
-    })
+            user_query        
+    )
     t2 = perf_counter()
     logger.info(response)
-
-    logger.info(response['choices'][0]['message']['content'])
     logger.info(f"Response time: {t2 - t1:.2f} seconds")
-    return response['choices'][0]['message']['content']
+    return response
 
 
 if __name__ == "__main__":
     query = "I want a nice outfit for this summer weekend. I'm a woman. I want to walk through paris probably in a park"
     reformulation_query(query)
+    
+    
+    

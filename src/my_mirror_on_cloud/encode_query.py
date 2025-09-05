@@ -27,8 +27,10 @@ def vectorize_query(query: str, model: CLIPModel=load_fashion_clip_model()[0], t
     with torch.no_grad():
         text_features = model.get_text_features(**inputs)
 
+    logger.debug("get text_feature")
     # Transformer en vecteur numpy
     vector_query = text_features[0].cpu().numpy()
+    logger.debug(vector_query)
     return vector_query
 
 

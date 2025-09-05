@@ -13,8 +13,8 @@ from weaviate.classes.init import Auth
 import weaviate.classes as wvc
 from weaviate.classes.query import MetadataQuery
 
-from my_mirror_on_cloud.params import WEAVIATE_URL, WEAVIATE_KEY, MISTRAL_API_KEY
-from my_mirror_on_cloud.encode_query import vectorize_query
+from .params import WEAVIATE_URL, WEAVIATE_KEY, MISTRAL_API_KEY
+from .encode_query import vectorize_query
 
 logger = loguru.logger
 
@@ -59,18 +59,21 @@ def connect_collection(client: weaviate.Client):
 
 
 
-def search_by_vector(vector_query: np.ndarray, collection)-> weaviate.classes.QueryResult:
+def search_by_vector(vector_query: np.ndarray, collection):
     """
     Search for look/items corresponding to the text query.
     input: vector of an image or text, Weaviate collection
     output: Weaviate query result
     """
+    logger.debug(collection)
+    logger.debug(vector_query)
     result = collection.query.near_vector(
         near_vector = vector_query,
         limit=3,
         include_vector=True,
         return_metadata=MetadataQuery(certainty=True)
     )
+    logger.debug(result)
 
     for o in result.objects:
         logger.info(o.properties)
@@ -82,7 +85,7 @@ def search_by_vector(vector_query: np.ndarray, collection)-> weaviate.classes.Qu
     return result
 
 
-def get_similar_text_to_vector(query: str, collection: str)-> weaviate.classes.QueryResult:
+def get_similar_text_to_vector(query: str, collection):
     """
     Get the most similar look/item to the text query.
     input: text query, Weaviate collection
@@ -90,10 +93,12 @@ def get_similar_text_to_vector(query: str, collection: str)-> weaviate.classes.Q
     """
 
     t1 = perf_counter()
+    logger.debug("start vectorize_query")
     vector_query = vectorize_query(query)
     t2 = perf_counter()
     # Add a "if" condition to use the correct collection
-    result = search_by_vector(vector_query, clothes_collection)
+    logger.debug("start search by vector")
+    result = search_by_vector(vector_query, collection)
     t3 = perf_counter()
 
     logger.info(f"Query: {query}")
@@ -103,7 +108,7 @@ def get_similar_text_to_vector(query: str, collection: str)-> weaviate.classes.Q
     return result
 
 
-def get_clothes_associated_to_look(look_uuid: str, collection: weaviate.classes.Collection)-> weaviate.classes.QueryResult:
+def get_clothes_associated_to_look(look_uuid: str, collection: weaviate.collections.classes):
     """
     Get the clothes associated to a look.
     input: look uuid, Weaviate collection
@@ -130,12 +135,13 @@ def get_clothes_associated_to_look(look_uuid: str, collection: weaviate.classes.
 
 if __name__ == "__main__":
     client = weaviate_connect()
-    tenue_collection, clothes_collection = connect_collection(client)
-    logger.info(clothes_collection.info())
+    tenues_collection, clothes_collection = connect_collection(client)
+    logger.info(tenues_collection)
     
     query = "A chic red dress"
-    result = get_similar_text_to_vector(query, tenue_collection)
+    result = get_similar_text_to_vector(query, tenues_collection)
     logger.info(result)
+    client.close()
 
     for o in result.objects:
         look_uuid = o.uuid
