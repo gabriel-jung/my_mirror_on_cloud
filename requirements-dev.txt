@@ -111,3 +111,5 @@ watchdog==6.0.0 ; python_version >= "3.12"
 wcwidth==0.2.13 ; python_version >= "3.12"
 weaviate-client==4.16.9 ; python_version >= "3.12"
 widgetsnbextension==4.0.14 ; python_version >= "3.12"
+langdetect>=1.0.9
+sentencepiece>=0.1.99

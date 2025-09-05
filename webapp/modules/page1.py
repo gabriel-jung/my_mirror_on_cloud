@@ -66,10 +66,12 @@ def show():
     with col2:
         # Formulaire profil utilisateur
         st.subheader("Tell us more about you!")
+        
         with st.form("user_profile_form"):
-            age = st.slider("Age", min_value=0, max_value=120, value=25)
-            gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
-            
+            with st.expander("Your profile"):
+                age = st.slider("Age", min_value=0, max_value=120, value=25)
+                gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
+                
             st.markdown(
                 """
                 <div style="display:flex; align-items:center;">
@@ -85,7 +87,6 @@ def show():
                 unsafe_allow_html=True
             )
         
-                
             query = st.text_area("Describe your desired outfit or occasion", height=100)
 
             submitted = st.form_submit_button("Submit")
