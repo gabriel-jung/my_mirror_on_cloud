@@ -3,7 +3,6 @@ from datetime import datetime
 from PIL import Image
 import time 
 
-<<<<<<< HEAD
 
 
 def show():
@@ -13,14 +12,6 @@ def show():
     if 'outfit_choice' not in st.session_state:
         st.session_state.outfit_choice = None
 
-=======
-if 'show_outfits' not in st.session_state:
-    st.session_state.show_outfits = False
-if 'outfit_choice' not in st.session_state:
-    st.session_state.outfit_choice = None
-
-def show():
->>>>>>> 01b3fe5e256a278fe3ae962489d575db526301b9
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
     st.write("Use the tabs above to learn more about the app.")
