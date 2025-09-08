@@ -1,4 +1,4 @@
-"""Handles local catalog operations using SQLite and Weaviate."""
+"""Handles local catalogue operations using SQLite."""
 
 import sqlite3
 import numpy as np
@@ -7,6 +7,7 @@ import io
 import json
 
 from typing import Optional, List
+from tqdm import tqdm
 
 
 def get_image_hash(file_path):
@@ -225,13 +226,12 @@ class LocalCatalogStore:
         image_hash = get_image_hash(file_path)
 
         self.cursor.execute(
-            "SELECT id, image_path, embeddings, tags, processing_status, date_added FROM images WHERE image_hash = ?",
+            "SELECT image_path, embeddings, tags, processing_status, date_added FROM images WHERE image_hash = ?",
             (image_hash,),
         )
         row = self.cursor.fetchone()
         if row:
             (
-                image_id,
                 image_path,
                 embeddings_blob,
                 tags_json,
@@ -245,7 +245,7 @@ class LocalCatalogStore:
             processing_status = json.loads(processing_json)
 
             return {
-                "id": image_id,
+                "image_hash": image_hash,
                 "image_path": image_path,
                 "embeddings": embeddings,
                 "tags": tags,
@@ -255,15 +255,15 @@ class LocalCatalogStore:
         else:
             return None
 
-    def get_all_images(self):
+    def get_all_images(self, show_progress: bool = True) -> List[dict]:
         self.cursor.execute(
-            "SELECT id, image_path, embeddings, tags, processing_status, date_added FROM images"
+            "SELECT image_hash, image_path, embeddings, tags, processing_status, date_added FROM images"
         )
         rows = self.cursor.fetchall()
         results = []
-        for row in rows:
+        for row in tqdm(rows, disable=not show_progress):
             (
-                image_id,
+                image_hash,
                 image_path,
                 embeddings_blob,
                 tags_json,
@@ -278,7 +278,7 @@ class LocalCatalogStore:
             processing_status = json.loads(processing_json)
             results.append(
                 {
-                    "id": image_id,
+                    "image_hash": image_hash,
                     "image_path": image_path,
                     "embeddings": embeddings,
                     "tags": tags,
@@ -287,6 +287,24 @@ class LocalCatalogStore:
                 }
             )
         return results
+
+    def get_all_columns(self):
+        """Get all table names and their column names."""
+        # Get table names
+        self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = self.cursor.fetchall()
+
+        result = {}
+
+        # For each table, get column names
+        for table in tables:
+            table_name = table[0]
+            self.cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = self.cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            result[table_name] = column_names
+
+        return result
 
     def close(self):
         self.conn.close()

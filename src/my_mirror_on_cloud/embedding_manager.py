@@ -32,6 +32,10 @@ class ClothingImageEmbedder:
         """Encode images to embeddings."""
         raise NotImplementedError("Must implement encode_images")
 
+    def encode_texts(self, texts: Union[str, List[str]], **kwargs) -> Any:
+        """Encode texts to embeddings."""
+        raise NotImplementedError("Must implement encode_texts")
+
     def is_valid_embedding(self, embedding: Any) -> bool:
         """Check if embedding is valid."""
         raise NotImplementedError("Must implement is_valid_embedding")
@@ -56,6 +60,17 @@ class FashionCLIPEmbedder(ClothingImageEmbedder):
                 print("FashionCLIP loaded with float32 precision")
         except Exception as e:
             raise RuntimeError(f"Failed to load FashionCLIP model: {e}")
+
+    def encode_texts(
+        self, texts: Union[str, List[str]], batch_size: int = 32
+    ) -> np.ndarray:
+        """Encode text to embeddings using FashionCLIP."""
+        if isinstance(texts, str):
+            texts = [texts]
+        try:
+            return self.model.encode_text(texts, batch_size=batch_size)
+        except Exception as e:
+            raise RuntimeError(f"Failed to encode texts: {e}")
 
     def encode_images(
         self,
@@ -212,6 +227,76 @@ def vectorize_images(
                     "success": False,
                     "duration": 0,
                     "image_path": image_path,
+                    "model_name": model_name,
+                    "error": str(e),
+                }
+            )
+
+    return results
+
+
+def vectorize_texts(
+    texts: Union[str, List[str]],
+    model_name: str = "fashion-clip",
+    batch_size: int = 32,
+) -> List[dict]:
+    """Complete text vectorization pipeline with batch processing and individual results."""
+
+    start_time = time.time()
+    results = []
+
+    try:
+        # Create embedder
+        embedder = create_embedder(model_name)
+
+        # Handle single text input
+        if isinstance(texts, str):
+            texts = [texts]
+
+        num_texts = len(texts)
+        embeddings = None
+        is_valid = False
+        error_msg = ""
+
+        try:
+            embeddings = embedder.encode_texts(texts, batch_size=batch_size)
+            is_valid = embedder.is_valid_embedding(embeddings)
+
+            if not is_valid:
+                error_msg = "Invalid embeddings generated"
+
+        except Exception as e:
+            error_msg = f"Text encoding failed: {str(e)}"
+
+        duration = time.time() - start_time
+        success = is_valid and embeddings is not None
+
+        # Create individual result dictionaries from batch results
+        for idx, text in enumerate(texts):
+            embedding = embeddings[idx] if success else None
+
+            result = {
+                "embedding": embedding,
+                "is_valid": is_valid,
+                "success": success,
+                "duration": duration / num_texts if num_texts > 0 else duration,
+                "text": text,
+                "model_name": model_name,
+                "error": error_msg if not success else None,
+            }
+
+            results.append(result)
+
+    except Exception as e:
+        # If global error occurs, create error entries for all texts
+        for text in texts if isinstance(texts, list) else [texts]:
+            results.append(
+                {
+                    "embedding": None,
+                    "is_valid": False,
+                    "success": False,
+                    "duration": 0,
+                    "text": text,
                     "model_name": model_name,
                     "error": str(e),
                 }
