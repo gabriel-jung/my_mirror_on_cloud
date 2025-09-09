@@ -6,7 +6,8 @@ from weaviate.classes.query import MetadataQuery
 import os
 from dotenv import load_dotenv, find_dotenv
 import loguru
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
+from numpy.typing import NDArray
 
 from tqdm import tqdm
 
@@ -136,7 +137,7 @@ class WeaviateManager:
         self,
         collection_name: str,
         properties: Dict[str, Any],
-        vectors: Optional[Dict[str, List[float]]] = None,
+        vectors: Optional[Union[Dict[str, List[float]], NDArray]] = None,
         uuid: Optional[str] = None,
     ) -> str:
         """Insert a single object into a collection"""
@@ -200,11 +201,11 @@ class WeaviateManager:
 
     def search_by_vector(
         self,
-        query_vector: List[float],
+        query_vector: Union[List[float], NDArray],
         collection_name: str,
         target_vector: str,
         limit: int = 5,
-        certainty: float = 0.7,
+        certainty: float = 0.0,
     ):
         """Search collection by vector similarity"""
         if not self.is_connected():
@@ -221,7 +222,7 @@ class WeaviateManager:
         return results
 
     def search_by_text(self, collection_name: str, query: str, limit: int = 5):
-        """Search collection by text similarity - to be implemented"""
+        """Search collection by text similarity - (only for embedded snowflake descriptions)"""
         if not self.is_connected():
             raise ConnectionError("No active connection to Weaviate")
 
