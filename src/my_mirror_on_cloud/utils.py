@@ -1,5 +1,8 @@
 import io
 import base64
+import re
+
+import numpy as np
 
 from PIL import Image
 
@@ -42,3 +45,24 @@ def resize_and_encode_image(image_path, max_width=512):
     buffer = io.BytesIO()
     image.save(buffer, format="JPEG", quality=85)
     return base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+
+def apply_l2norm(x: np.ndarray) -> np.ndarray:
+    """L2-normalize the input array along the last axis."""
+    x = x.astype("float32", copy=False)
+    norm_squared = np.sum(x * x, axis=-1, keepdims=True)
+    norm = np.sqrt(np.maximum(norm_squared, 1e-24))
+    return x / norm
+
+
+def clean_name(name: str) -> str:
+    """Clean a string to make it a valid GraphQL property name."""
+    # Remove invalid characters
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "", name)
+
+    # Ensure it starts with a letter or underscore (not a digit)
+    if re.match(r"^\d", sanitized):
+        sanitized = "_" + sanitized
+
+    # Truncate to max length (230 chars)
+    return sanitized[:230]

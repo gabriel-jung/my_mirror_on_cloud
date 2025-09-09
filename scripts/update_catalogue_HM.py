@@ -1,5 +1,4 @@
 from itertools import chain
-import logging
 import pandas as pd
 from tqdm.notebook import tqdm
 from weaviate.util import generate_uuid5
@@ -7,12 +6,9 @@ import weaviate.classes.config as wc
 
 from my_mirror_on_cloud import weaviate_manager as wm
 import my_mirror_on_cloud.vector_store as vs
+from my_mirror_on_cloud.utils import clean_name
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+from loguru import logger
 
 
 def get_unique_keys(list_of_dicts):
@@ -35,25 +31,18 @@ def process_catalog_data(catalog_data):
             "image_path": row.image_path,
         }
 
-        # Process embeddings
         for embedding in row.embeddings:
-            model_name = embedding["model_name"].replace("-", "")
-            item_data.update(
-                {
-                    f"vector_{model_name}": embedding["embedding"],
-                    f"timestamp_{model_name}": embedding["timestamp"],
-                    f"confidence_{model_name}": embedding["confidence"],
-                }
+            model_suffix = (
+                f"_{embedding['model_name']}" if "model_name" in embedding else ""
             )
-
-        # Process tags (commented out - uncomment if needed)
-        # for tag in row.tags:
-        #     model_name = tag['model_name'].replace("-", "")
-        #     item_data.update({
-        #         f"description_{model_name}": tag['embedding'],
-        #         f"timestamp_{model_name}": tag['timestamp'],
-        #         f"confidence_{model_name}": tag['confidence'],
-        #     })
+            for key, value in embedding.items():
+                if key != "model_name":
+                    item_data[clean_name(f"{key}{model_suffix}")] = value
+        for tag in row.tags:
+            model_suffix = f"_{tag['model_name']}" if "model_name" in tag else ""
+            for key, value in tag.items():
+                if key != "model_name":
+                    item_data[clean_name(f"{key}{model_suffix}")] = value
 
         all_data.append(item_data)
 
@@ -66,9 +55,13 @@ def format_data_for_weaviate(all_data):
     logger.info(f"📋 Formatting {len(all_data)} items for Weaviate")
 
     unique_keys = get_unique_keys(all_data)
-    vector_keys = [key for key in unique_keys if key.startswith("vector_")]
+    vector_keys = [
+        clean_name(key) for key in unique_keys if key.startswith("embedding_")
+    ]
     nonvector_keys = [
-        key for key in unique_keys if not key.startswith("vector_") and key != "uuid"
+        clean_name(key)
+        for key in unique_keys
+        if not key.startswith("embedding_") and key != "uuid"
     ]
 
     logger.info(f"🔍 Found {len(vector_keys)} vector keys: {vector_keys}")
@@ -76,12 +69,12 @@ def format_data_for_weaviate(all_data):
 
     formatted_data = []
     for item in all_data:
-        item_data = {"vector": {}, "properties": {}, "uuid": None}
+        item_data = {"vectors": {}, "properties": {}, "uuid": None}
 
         # Add vectors
         for key in vector_keys:
             if key in item and item[key] is not None:
-                item_data["vector"][key] = item[key]
+                item_data["vectors"][key] = item[key]
 
         # Add properties
         for key in nonvector_keys:
@@ -95,11 +88,41 @@ def format_data_for_weaviate(all_data):
         formatted_data.append(item_data)
 
     logger.info(f"✅ Formatted {len(formatted_data)} items for batch insertion")
-    return formatted_data, vector_keys
+    return formatted_data, vector_keys, nonvector_keys
+
+
+def create_dynamic_properties(nonvector_keys):
+    """Create properties dynamically based on available keys."""
+    properties = []
+
+    for key in nonvector_keys:
+        if key.startswith("timestamp_"):
+            properties.append(wc.Property(name=key, data_type=wc.DataType.DATE))
+        elif key.startswith("confidence_"):
+            properties.append(wc.Property(name=key, data_type=wc.DataType.NUMBER))
+        else:
+            properties.append(wc.Property(name=key, data_type=wc.DataType.TEXT))
+
+    return properties
+
+
+def create_dynamic_vector_configs(vector_keys):
+    """Create vector configurations dynamically based on available keys."""
+    vector_configs = []
+    for key in vector_keys:
+        vector_configs.append(
+            wc.Configure.Vectors.self_provided(
+                name=key,
+                vector_index_config=wc.Configure.VectorIndex.hnsw(
+                    distance_metric=wc.VectorDistances.COSINE
+                ),
+            )
+        )
+    return vector_configs
 
 
 def create_and_populate_collection(
-    formatted_data, vector_keys, collection_name="Catalogue_HM"
+    formatted_data, vector_keys, nonvector_keys, collection_name="Catalogue_HM"
 ):
     """Create Weaviate collection and populate with data."""
     logger.info(
@@ -111,59 +134,81 @@ def create_and_populate_collection(
         weaviate.create_collection(
             collection_name=collection_name,
             force_creation=True,
-            properties=[
-                wc.Property(name="image_path", data_type=wc.DataType.TEXT),
-                wc.Property(name="timestamp_fashionclip", data_type=wc.DataType.TEXT),
-                wc.Property(
-                    name="confidence_fashionclip", data_type=wc.DataType.NUMBER
-                ),
-            ],
-            vector_config=[
-                wc.Configure.Vectors.self_provided(
-                    name=key,
-                    vector_index_config=wc.Configure.VectorIndex.hnsw(
-                        distance_metric=wc.VectorDistances.COSINE
-                    ),
-                )
-                for key in vector_keys
-            ],
+            properties=create_dynamic_properties(nonvector_keys),
+            vector_config=create_dynamic_vector_configs(vector_keys),
         )
 
-        logger.info(
-            f"📦 Starting batch insertion of {len(formatted_data)} objects (batch size: 500)"
-        )
+        logger.info("📦 Starting batch insertion")
 
-        # Batch insert data
-        weaviate.batch_insert_objects_to_collection(
-            collection_name=collection_name,
-            objects_data=formatted_data,
-            batch_size=500,
-            show_progress=True,
-        )
+        # Try normal batch insertion first
+        try:
+            weaviate.batch_insert_objects_to_collection(
+                collection_name=collection_name,
+                objects_data=formatted_data,
+                batch_size=100,
+                show_progress=True,
+            )
+            logger.info("✅ Batch insertion completed successfully")
+
+        except Exception as e:
+            logger.warning(f"Some batches failed, checking for failed objects: {e}")
+
+            # Check if there are failed objects to retry
+            if hasattr(weaviate.client, "batch") and hasattr(
+                weaviate.client.batch, "failed_objects"
+            ):
+                failed_objects = weaviate.client.batch.failed_objects
+                if failed_objects:
+                    logger.info(
+                        f"🔄 Retrying {len(failed_objects)} failed objects with smaller batches"
+                    )
+
+                    # Retry failed objects with batch size of 10
+                    weaviate.batch_insert_objects_to_collection(
+                        collection_name=collection_name,
+                        objects_data=failed_objects,
+                        batch_size=10,
+                        show_progress=True,
+                    )
 
 
 def main():
     """Main function to orchestrate the catalog migration process."""
-    db_path = "../data/catalogue_v1.db"
-    logger.info(f"📂 Reading catalog data from: {db_path}")
+    try:
+        db_path = "../data/catalogue_v1.db"
+        logger.info(f"📂 Reading catalog data from: {db_path}")
 
-    # Load catalog data
-    catalog_store = vs.LocalCatalogStore(db_path=db_path)
-    catalog_data = catalog_store.get_all_images()
-    catalog_store.close()
+        # Load catalog data
+        catalog_store = vs.LocalCatalogStore(db_path=db_path)
+        catalog_data = catalog_store.get_all_images()
+        catalog_store.close()
 
-    logger.info(f"📊 Loaded {len(catalog_data)} items from catalog database")
+        if not catalog_data:
+            logger.warning("No data found in catalog database")
+            return
 
-    # Process and format data
-    all_data = process_catalog_data(catalog_data)
-    formatted_data, vector_keys = format_data_for_weaviate(all_data)
+        logger.info(f"📊 Loaded {len(catalog_data)} items from catalog database")
 
-    # Create collection and insert data
-    create_and_populate_collection(formatted_data, vector_keys)
+        # Process and format data
+        all_data = process_catalog_data(catalog_data)
+        if not all_data:
+            logger.error("No valid data after processing")
+            return
 
-    logger.info(
-        f"🎉 Successfully migrated {len(formatted_data)} items to Weaviate collection"
-    )
+        formatted_data, vector_keys, nonvectors_keys = format_data_for_weaviate(
+            all_data
+        )
+
+        # Create collection and insert data
+        create_and_populate_collection(formatted_data, vector_keys, nonvectors_keys)
+
+        logger.info(
+            f"🎉 Successfully migrated {len(formatted_data)} items to Weaviate collection"
+        )
+
+    except Exception as e:
+        logger.error(f"Migration failed: {e}")
+        raise
 
 
 if __name__ == "__main__":

@@ -5,9 +5,28 @@ import numpy as np
 import hashlib
 import io
 import json
+import sys
 
 from typing import Optional, List
 from tqdm import tqdm
+from loguru import logger
+
+# Remove default handler
+logger.remove()
+
+# Add handler that only shows important messages
+logger.add(
+    sys.stderr,
+    level="ERROR",  # Only errors
+    format="<red>{level}</red>: {message}",  # Minimal format
+)
+
+# Optional: Add file logging for debugging (separate from console)
+logger.add(
+    "vector_processing.log",
+    level="DEBUG",  # Full logging to file
+    rotation="10 MB",
+)
 
 
 def get_image_hash(file_path):
@@ -88,6 +107,8 @@ class LocalCatalogStore:
         self.cursor = self.conn.cursor()
         self._init_db()
 
+        logger.info(f"Initialized LocalCatalogStore with database: {db_path}")
+
     def _init_db(self):
         self.cursor.execute("""
         CREATE TABLE IF NOT EXISTS images (
@@ -124,6 +145,7 @@ class LocalCatalogStore:
             embeddings = []
         elif isinstance(embeddings, dict):
             embeddings = [embeddings]
+
         image_hash = get_image_hash(file_path)
         tags_json = json.dumps(tags)
         processing_json = json.dumps(processing)
@@ -155,57 +177,93 @@ class LocalCatalogStore:
             self.conn.commit()
             return self.cursor.lastrowid
         else:
-            model_name = list(processing.keys())[0]
-            image_id, current_tags_json, current_processing_json, current_embeddings = (
-                row
+            # Existing image
+            (
+                image_id,
+                current_tags_json,
+                current_processing_json,
+                current_embeddings_blob,
+            ) = row
+
+            # Load existing data
+            current_processing = (
+                json.loads(current_processing_json) if current_processing_json else {}
+            )
+            current_tags = json.loads(current_tags_json) if current_tags_json else []
+            current_embeddings = (
+                deserialize_embeddings(current_embeddings_blob)
+                if current_embeddings_blob
+                else []
             )
 
-            current_processing = json.loads(current_processing_json)
+            logger.debug(
+                f"Image ID {image_id} - Current models: {list(current_processing.keys())}"
+            )
 
             if not force_update:
-                # Check if model has already processed this image
-                if model_name in current_processing and current_processing[model_name]:
-                    print(
-                        f"Model '{model_name}' already processed image ID {image_id}. No update done."
+                models_to_skip = []
+                for model_name, status in processing.items():
+                    if (
+                        model_name in current_processing
+                        and current_processing[model_name]
+                    ):
+                        models_to_skip.append(model_name)
+                if models_to_skip:
+                    logger.warning(
+                        f"Models {models_to_skip} already processed for image ID {image_id}. Use force_update=True to override."
                     )
-                    return image_id
+                    if len(models_to_skip) == len(processing):
+                        return image_id
 
-            current_tags = json.loads(current_tags_json)
-            current_embeddings = deserialize_embeddings(current_embeddings)
-
-            # Update processing status
+            # Update processing status - merge with existing
+            logger.debug(f"Updating processing: {processing}")
             current_processing.update(processing)
 
             # Update embeddings - replace existing embeddings for same models
             if embeddings:
                 new_model_names = {emb["model_name"] for emb in embeddings}
+                logger.debug(f"Adding embeddings for models: {new_model_names}")
 
-                # Remove existing embeddings for these models
-                current_embeddings = [
+                # Keep embeddings for models NOT being updated
+                preserved_embeddings = [
                     emb
                     for emb in current_embeddings
                     if emb["model_name"] not in new_model_names
                 ]
 
                 # Add new embeddings
-                current_embeddings.extend(embeddings)
+                final_embeddings = preserved_embeddings + embeddings
 
-            # Update tags - replace existing tags for same models
+                logger.debug(
+                    f"Final embedding models: {[e['model_name'] for e in final_embeddings]}"
+                )
+            else:
+                final_embeddings = current_embeddings
+
+            # Update tags - preserve existing, replace only for new models
             if tags:
                 new_tag_models = {
-                    tag.get("model_name") for tag in tags if tag.get("model_name")
+                    tag.get("model_name")
+                    for tag in tags
+                    if isinstance(tag, dict) and tag.get("model_name")
                 }
 
-                # Remove existing tags for these models
-                current_tags = [
+                # Keep tags for models NOT being updated
+                preserved_tags = [
                     tag
                     for tag in current_tags
-                    if tag.get("model_name") not in new_tag_models
+                    if not (
+                        isinstance(tag, dict)
+                        and tag.get("model_name") in new_tag_models
+                    )
                 ]
 
                 # Add new tags
-                current_tags.extend(tags)
+                final_tags = preserved_tags + tags
+            else:
+                final_tags = current_tags
 
+            # Update database
             self.cursor.execute(
                 """
                 UPDATE images
@@ -213,13 +271,18 @@ class LocalCatalogStore:
                 WHERE id = ?
                 """,
                 (
-                    json.dumps(current_tags),
+                    json.dumps(final_tags),
                     json.dumps(current_processing),
-                    serialize_embeddings(current_embeddings),
+                    serialize_embeddings(final_embeddings),
                     image_id,
                 ),
             )
             self.conn.commit()
+
+            logger.success(
+                f"Updated image ID {image_id} with models: {list(processing.keys())}"
+            )
+            return image_id
         return image_id
 
     def get_image_by_path(self, file_path):
