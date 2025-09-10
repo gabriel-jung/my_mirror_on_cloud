@@ -122,8 +122,8 @@ def create_dynamic_vector_configs(vector_keys, nonvector_keys=[]):
         if "description" in key:
             model_name = key.replace("description_", "")
             vector_configs.append(
-                wc.Configure.Vectors.text2vec_transformers(
-                    name="embedding_description_" + model_name,
+                wc.Configure.Vectors.text2vec_weaviate(
+                    name="embedding_description_" + model_name + "_snowflake",
                     model="Snowflake/snowflake-arctic-embed-l-v2.0",
                     source_properties=[key],
                 )
@@ -156,7 +156,7 @@ def create_and_populate_collection(
             weaviate.batch_insert_objects_to_collection(
                 collection_name=collection_name,
                 objects_data=formatted_data,
-                batch_size=100,
+                batch_size=200,
                 show_progress=True,
             )
             logger.info("✅ Batch insertion completed successfully")
