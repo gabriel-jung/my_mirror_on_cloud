@@ -2,7 +2,7 @@
 
 import weaviate
 import weaviate.classes.init as wvc
-from weaviate.classes.query import MetadataQuery
+from weaviate.classes.query import MetadataQuery, Filter
 import os
 from dotenv import load_dotenv, find_dotenv
 import loguru
@@ -217,8 +217,10 @@ class WeaviateManager:
             target_vector=target_vector,
             limit=limit,
             certainty=certainty,
+            include_vector=True,
             return_metadata=MetadataQuery(certainty=True, distance=True),
         )
+
         return results
 
     def search_by_text(self, collection_name: str, query: str, limit: int = 5):
@@ -254,7 +256,7 @@ class WeaviateManager:
         """Query items in a collection based on a property value"""
         if not self.is_connected():
             raise ConnectionError("No active connection to Weaviate")
-
+        
         collection = self.client.collections.use(collection_name)
         result = collection.query.get(
             where={
@@ -264,6 +266,26 @@ class WeaviateManager:
             },
             properties=["*"] if sub_properties is None else sub_properties,
         )
+
+        return result
+
+    def query_item_by_fetch(
+        self,
+        collection_name: str,
+        query_property: str,
+        query_value: str,
+        limit: int=5,
+    ):
+        """Query items in a collection based on a property value"""
+        if not self.is_connected():
+            raise ConnectionError("No active connection to Weaviate")
+        collection = self.client.collections.use(collection_name)
+
+        result = collection.query.fetch_objects(
+            filters=Filter.by_property(query_property).equal(query_value),
+            limit=3,
+            include_vector=True
+        )    
 
         return result
 

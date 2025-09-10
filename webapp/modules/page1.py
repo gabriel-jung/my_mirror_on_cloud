@@ -18,8 +18,9 @@ def show():
         collections = init_model()
         st.session_state.tenues_collection = collections[0]
         st.session_state.clothes_collection = collections[1]
-        st.session_state.model_lang = collections[2]
-        st.session_state.tokenizer_lang = collections[3]
+        st.session_state.catalogue_collection = collections[2]
+        st.session_state.model_lang = collections[3] 
+        st.session_state.tokenizer_lang = collections[4]
 
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
@@ -27,6 +28,7 @@ def show():
 
     # taille des colonnes
     col1, col2 = st.columns([1, 2], border=True)
+    
 
     with col1:
         uploaded_file = st.file_uploader(
@@ -67,9 +69,9 @@ def show():
         st.subheader("Tell us more about you!")
 
         with st.form("user_profile_form"):
-            # with st.expander("Your profile"):
-            # age = st.slider("Age", min_value=0, max_value=120, value=25)
-            # gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
+            with st.expander("Your profile"):
+                age = st.slider("Age", min_value=0, max_value=120, value=25)
+                gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
 
             st.markdown(
                 """
@@ -91,45 +93,40 @@ def show():
             submitted = st.form_submit_button("Submit")
             if submitted:
                 st.session_state.show_outfits = True
-                success = st.success(
-                    "Profile information submitted successfully!", icon="✅"
-                )
+                st.session_state.outfit_choice = None
+                success = st.success("Profile information submitted successfully!", icon="✅")
                 # Launch search_recommended_outfit
-                result = search_recommended_outfit(
-                    query,
-                    st.session_state.tenues_collection,
-                    st.session_state.model_lang,
-                    st.session_state.tokenizer_lang,
-                )
-                st.write(result)
+                st.session_state.recommended_outfit = search_recommended_outfit(query, st.session_state.tenues_collection, st.session_state.clothes_collection, st.session_state.catalogue_collection, st.session_state.model_lang, st.session_state.tokenizer_lang)
+                st.write(st.session_state.recommended_outfit)
 
     if st.session_state.show_outfits:
         if st.session_state.outfit_choice is None:
-            with st.spinner("Finding the perfect outfit for you... ⏳"):
-                time.sleep(3)
+            with st.spinner("Finding the perfect outfit for you... ⏳"):  
                 st.balloons()
                 success.empty()
 
         st.success("Outfit recommendations are ready!")
         col1, col2, col3 = st.columns([1, 1, 1], border=True)
+        options = ["Outfit 1", "Outfit 2", "Outfit 3"]
         with col1:
-            st.image("https://via.placeholder.com/150", caption="Outfit 1")
+            st.image("https://via.placeholder.com/150", caption=options[0])
         with col2:
-            st.image("https://via.placeholder.com/150", caption="Outfit 2")
+            st.image("https://via.placeholder.com/150", caption=options[1])
         with col3:
-            st.image("https://via.placeholder.com/150", caption="Outfit 3")
+            st.image("https://via.placeholder.com/150", caption=options[2])
 
         # ask choose one outfit
         st.markdown("### Choose your favorite outfit:")
         with st.form("choice_form"):
             outfit_choice = st.radio(
-                "Select an outfit", options=["Outfit 1", "Outfit 2", "Outfit 3"]
+                 "Select an outfit", options=["Outfit 1", "Outfit 2", "Outfit 3"]
             )
-            st.session_state.outfit_choice = outfit_choice
+            st.session_state.outfit_choice = [outfit_choice, st.session_state.recommended_outfit[options.index(outfit_choice)]["cloth_path"]]
             submitted_choice = st.form_submit_button("Submit")
 
             if submitted_choice:
                 st.success(f"You have selected {outfit_choice}!")
+                st.write(st.session_state.outfit_choice[0], st.session_state.outfit_choice[1])
                 img.markdown(
                     """
                     <div style="
