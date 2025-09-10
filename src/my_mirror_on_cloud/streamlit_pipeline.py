@@ -16,8 +16,8 @@ def init_model():
     return wm, tenues_collection, clothes_collection, catalogue_collection,  model_lang, tokenizer_lang, fashion_clip_emb
 
 
-def search_recommended_outfit(query, init_model):
+def search_recommended_outfit(query, img_path, init_model):
     trad_query = translate_to_en(query, init_model[4], init_model[5])
     cleaned_query = reformulation_query(trad_query)
-    recommended_objects = algo_flow(init_model[0], cleaned_query, init_model[1], init_model[2], init_model[3], init_model[6])
+    recommended_objects = algo_flow(init_model[0], cleaned_query, img_path, init_model[1], init_model[2], init_model[3], init_model[6])
     return recommended_objects

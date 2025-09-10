@@ -304,6 +304,7 @@ def create_embedder(
 
 
 def vectorize_images(
+    embedder: ClothingImageEmbedder,
     image_paths: Union[str, List[str]],
     model_name: str = "fashion-clip",
     batch_size: int = 32,
@@ -318,7 +319,7 @@ def vectorize_images(
 
     try:
         # Create embedder
-        embedder = create_embedder(model_name, use_float16=use_float16)
+        #embedder = create_embedder(model_name, use_float16=use_float16)
 
         # Handle single image path
         if isinstance(image_paths, str):

@@ -1,7 +1,8 @@
 import numpy as np
 import loguru
+from PIL import Image
 
-from transformers import CLIPModel, CLIPTokenizer
+from transformers import CLIPModel, CLIPTokenizer, CLIPProcessor
 import torch
 
 logger = loguru.logger
@@ -14,23 +15,24 @@ def load_fashion_clip_model(model_name: str = "patrickjohncyh/fashion-clip") -> 
     """
     model = CLIPModel.from_pretrained(model_name)
     tokenizer = CLIPTokenizer.from_pretrained(model_name)
-    return model, tokenizer
+    processor = CLIPProcessor.from_pretrained(model_name)
+    return model, tokenizer, processor
 
 
-def vectorize_query(query: str, model: CLIPModel=load_fashion_clip_model()[0], tokenizer: CLIPTokenizer=load_fashion_clip_model()[1])-> np.ndarray:
+def vectorize_query(image, model: CLIPModel=load_fashion_clip_model()[0], processor: CLIPProcessor=load_fashion_clip_model()[2])-> np.ndarray:
     """
     Vectorize the query using the Fashion CLIP model and tokenizer.
     input: query (str), CLIP model, CLIP tokenizer
     output: vectorized query (np.ndarray)
     """
-    inputs = tokenizer([query], return_tensors="pt", padding=True, truncation=True)
+    inputs = processor(images=image, return_tensors="pt")
     with torch.no_grad():
-        text_features = model.get_text_features(**inputs)
+        image_features = model.get_image_features(**inputs)
 
     # Transformer en vecteur numpy
-    vector_query = text_features[0].cpu().numpy()
+    image_vector = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
    
-    return vector_query
+    return image_vector.squeeze().tolist()
 
 
 if __name__ == "__main__":

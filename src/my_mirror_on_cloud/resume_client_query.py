@@ -76,6 +76,7 @@ def define_role_system()-> dict:
         - Be concise, Keep the exact same structure. 
         - Do not give recommendation or example.
         - Ensure the sentence is natural, readable English, without abbreviations or slang.
+        - the name of the flow is really important. Do not forget it.
 
         Rules:
         - Use only these values:

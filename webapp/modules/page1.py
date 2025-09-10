@@ -17,6 +17,8 @@ def show():
         st.session_state.outfit_choice = None
     if "init_model" not in st.session_state:
         st.session_state.init_model = init_model()
+    if "uploaded_file" not in st.session_state:
+        st.session_state.uploaded_file = None
 
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
@@ -27,7 +29,7 @@ def show():
     
 
     with col1:
-        uploaded_file = st.file_uploader(
+        st.session_state.uploaded_file = st.file_uploader(
             "Upload an image of you today", type=["png", "jpg", "jpeg"]
         )
 
@@ -51,9 +53,9 @@ def show():
             unsafe_allow_html=True,
         )
 
-        if uploaded_file:
+        if st.session_state.uploaded_file:
             # Affichage immédiat de l'image
-            image = Image.open(uploaded_file)
+            image = Image.open(st.session_state.uploaded_file)
             img.image(image, caption="Image uploadée", width=200)
 
             # --- Section d'analyse ---
@@ -92,7 +94,7 @@ def show():
                 st.session_state.outfit_choice = None
                 success = st.success("Profile information submitted successfully!", icon="✅")
                 # Launch search_recommended_outfit
-                st.session_state.recommended_outfit = search_recommended_outfit(f"{query}. I'm a {gender}.", st.session_state.init_model)
+                st.session_state.recommended_outfit = search_recommended_outfit(f"{query}. I'm a {gender}.", image, st.session_state.init_model)
                 with st.expander("Afficher l'array", expanded=False):
                     st.write(st.session_state.recommended_outfit)
 

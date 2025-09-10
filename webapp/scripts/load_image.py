@@ -9,6 +9,9 @@ def get_url_from_image_path(image_path):
     base_url = "https://storage.googleapis.com/catalogue_hm/"
     return base_url + str(relative_path).replace("%5C", "/").replace("%5c", "/").replace('\\', '/')
 
+def reshape():
+    pass
+
 def resize(pil_img):
     new_width = 100
     w_percent = (new_width / float(pil_img.size[0]))
