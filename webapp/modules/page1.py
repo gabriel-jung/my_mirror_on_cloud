@@ -8,19 +8,15 @@ from src.my_mirror_on_cloud.streamlit_pipeline import (
     search_recommended_outfit,
 )
 
+from webapp.scripts.load_image import get_url_from_image_path, load_image_from_url
 
 def show():
     if "show_outfits" not in st.session_state:
         st.session_state.show_outfits = False
     if "outfit_choice" not in st.session_state:
         st.session_state.outfit_choice = None
-    if "tenues_collection" not in st.session_state:
-        collections = init_model()
-        st.session_state.tenues_collection = collections[0]
-        st.session_state.clothes_collection = collections[1]
-        st.session_state.catalogue_collection = collections[2]
-        st.session_state.model_lang = collections[3] 
-        st.session_state.tokenizer_lang = collections[4]
+    if "init_model" not in st.session_state:
+        st.session_state.init_model = init_model()
 
     st.title("**Welcome to My Mirror on Cloud!**")
     st.subheader("This application recommends you outfits based on your requests")
@@ -62,7 +58,7 @@ def show():
 
             # --- Section d'analyse ---
             with st.spinner("Analyse en cours... ⏳"):
-                time.sleep(2)
+                time.sleep(1)
 
     with col2:
         # Formulaire profil utilisateur
@@ -96,58 +92,98 @@ def show():
                 st.session_state.outfit_choice = None
                 success = st.success("Profile information submitted successfully!", icon="✅")
                 # Launch search_recommended_outfit
-                st.session_state.recommended_outfit = search_recommended_outfit(query, st.session_state.tenues_collection, st.session_state.clothes_collection, st.session_state.catalogue_collection, st.session_state.model_lang, st.session_state.tokenizer_lang)
-                st.write(st.session_state.recommended_outfit)
+                st.session_state.recommended_outfit = search_recommended_outfit(f"{query}. I'm a {gender}.", st.session_state.init_model)
+                with st.expander("Afficher l'array", expanded=False):
+                    st.write(st.session_state.recommended_outfit)
 
     if st.session_state.show_outfits:
         if st.session_state.outfit_choice is None:
-            with st.spinner("Finding the perfect outfit for you... ⏳"):  
-                st.balloons()
-                success.empty()
+            if st.session_state.recommended_outfit is not None:
+                with st.spinner("Finding the perfect outfit for you... ⏳"):  
+                    st.balloons()
+                    success.empty()
 
-        st.success("Outfit recommendations are ready!")
-        col1, col2, col3 = st.columns([1, 1, 1], border=True)
-        options = ["Outfit 1", "Outfit 2", "Outfit 3"]
-        with col1:
-            st.image("https://via.placeholder.com/150", caption=options[0])
-        with col2:
-            st.image("https://via.placeholder.com/150", caption=options[1])
-        with col3:
-            st.image("https://via.placeholder.com/150", caption=options[2])
+                st.success("Outfit recommendations are ready!")
+                col1, col2, col3 = st.columns([1, 1, 1], border=True)
+                options = ["Outfit 1", "Outfit 2", "Outfit 3"]
+                with col1:
+                    st.subheader(options[0])
+                    images = st.session_state.recommended_outfit[0]["cloth_path"]
+                    cols = st.columns(2)
+                    for i, path in enumerate(images):  # max 3 images
+                        image_url = get_url_from_image_path(path)
+                        img = load_image_from_url(image_url)
 
-        # ask choose one outfit
-        st.markdown("### Choose your favorite outfit:")
-        with st.form("choice_form"):
-            outfit_choice = st.radio(
-                 "Select an outfit", options=["Outfit 1", "Outfit 2", "Outfit 3"]
-            )
-            st.session_state.outfit_choice = [outfit_choice, st.session_state.recommended_outfit[options.index(outfit_choice)]["cloth_path"]]
-            submitted_choice = st.form_submit_button("Submit")
+                        # Choisir la colonne de manière alternée
+                        col = cols[i % 2]
+                        
+                        # Afficher l'image
+                        col.image(img, channels="RGB")
+                with col2:
+                    st.subheader(options[1])
+                    images = st.session_state.recommended_outfit[1]["cloth_path"]
+                    cols = st.columns(2)
 
-            if submitted_choice:
-                st.success(f"You have selected {outfit_choice}!")
-                st.write(st.session_state.outfit_choice[0], st.session_state.outfit_choice[1])
-                img.markdown(
-                    """
-                    <div style="
-                        width:200px;
-                        height:200px;
-                        border:2px dashed #888;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#888;
-                        border-radius:10px;
-                    ">
-                        Loading image...
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                with st.spinner("Switching clothes on your picture... ⏳"):
-                    time.sleep(3)
-                    img.image(
-                        "https://via.placeholder.com/200",
-                        caption="Your new outfit",
-                        width=200,
+                    for i, path in enumerate(images):  # max 3 images
+                        image_url = get_url_from_image_path(path)
+                        img = load_image_from_url(image_url)
+
+                        # Choisir la colonne de manière alternée
+                        col = cols[i % 2]
+                        
+                        # Afficher l'image
+                        col.image(img, channels="RGB")
+                with col3:
+                    st.subheader(options[2])
+                    images = st.session_state.recommended_outfit[2]["cloth_path"]
+                    cols = st.columns(2)
+
+                    for i, path in enumerate(images):  # max 3 images
+                        image_url = get_url_from_image_path(path)
+                        img = load_image_from_url(image_url)
+
+                        # Choisir la colonne de manière alternée
+                        col = cols[i % 2]
+                        
+                        # Afficher l'image
+                        col.image(img, channels="RGB")
+
+                # ask choose one outfit
+                st.markdown("### Choose your favorite outfit:")
+                with st.form("choice_form"):
+                    outfit_choice = st.radio(
+                        "Select an outfit", options=["Outfit 1", "Outfit 2", "Outfit 3"]
                     )
+                    st.session_state.outfit_choice = [outfit_choice, st.session_state.recommended_outfit[options.index(outfit_choice)]["cloth_path"]]
+                    submitted_choice = st.form_submit_button("Submit")
+
+                    if submitted_choice:
+                        st.success(f"You have selected {outfit_choice}!")
+                        st.write(st.session_state.outfit_choice[0], st.session_state.outfit_choice[1])
+                        img.markdown(
+                            """
+                            <div style="
+                                width:200px;
+                                height:200px;
+                                border:2px dashed #888;
+                                display:flex;
+                                align-items:center;
+                                justify-content:center;
+                                color:#888;
+                                border-radius:10px;
+                            ">
+                                Loading image...
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        with st.spinner("Switching clothes on your picture... ⏳"):
+                            time.sleep(3)
+                            img.image(
+                                "https://via.placeholder.com/200",
+                                caption="Your new outfit",
+                                width=200,
+                            )
+                
+            else:
+                st.warning("Request need clarification")

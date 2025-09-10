@@ -387,19 +387,18 @@ def vectorize_images(
 
 
 def vectorize_texts(
+    embedder: ClothingImageEmbedder,
     texts: Union[str, List[str]],
     model_name: str = "fashion-clip",
     batch_size: int = 32,
 ) -> List[dict]:
     """Complete text vectorization pipeline with batch processing and individual results."""
-
     start_time = time.time()
     results = []
 
     try:
         # Create embedder
-        embedder = create_embedder(model_name)
-
+        # embedder = create_embedder(model_name)
         # Handle single text input
         if isinstance(texts, str):
             texts = [texts]
