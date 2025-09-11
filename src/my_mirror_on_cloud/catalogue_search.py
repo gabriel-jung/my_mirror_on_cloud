@@ -5,15 +5,16 @@ import numpy as np
 from collections import defaultdict
 from itertools import product
 from time import perf_counter
-from PIL import Image
 
-from .weaviate_manager import WeaviateManager
-from .embedding_manager import vectorize_texts, vectorize_images
+from typing import List, Any
+
+from .embedding_manager import vectorize_texts
 from .encode_query import vectorize_query
+
 
 logger = loguru.logger
 
-def connect_collection():
+def connect_collection()-> List[str]:
     """
     Connect to the Weaviate collection and load the CLIP model and tokenizer.
     input: Weaviate client
@@ -25,27 +26,28 @@ def connect_collection():
     return tenues_collection, clothes_collection, catalogue_collection
 
 
-def get_similar_text_to_vector(query: str, collection, wm, fashion_clip_emb):
+def get_similar_text_to_vector(query: str, collection: str, params: List[Any])-> List[Any]:
     """
     Get the most similar look/item to the text query.
     input: text query, Weaviate collection
     output: Weaviate query result
     """    
     t1 = perf_counter()
-    query_vector = vectorize_texts(fashion_clip_emb, [query], model_name="fashion-clip")[0]["embedding"]
+    query_vector = vectorize_texts(params.fashion_clip_emb, [query], model_name="fashion-clip")[0]["embedding"]
     t2 = perf_counter()
-    # with WeaviateManager() as wm:
+
     target_vector = "embedding_fashionclip" if collection == "Catalogue_HM" else "fclip"
-    if target_vector == "fclip":
-        result = wm.search_by_vector(
+    if params.type_of_query != "Hybrid" or target_vector == "fclip":
+        result = params.wm.search_by_vector(
             query_vector=query_vector,
             collection_name=collection,
             target_vector=target_vector,
             limit=3,
+
         )
     else:
         # hybride search
-        result = wm.search_hybrid(
+        result = params.wm.search_hybrid(
             query=query,
             query_vector=query_vector,
             collection_name=collection,
@@ -54,6 +56,7 @@ def get_similar_text_to_vector(query: str, collection, wm, fashion_clip_emb):
             alpha=0.5,
             limit=3,
         )
+        
     t3 = perf_counter()
     logger.info(f"Query: {query}")
     logger.info(f"Vectorization Time (text): {t2 - t1:.4f} seconds")
@@ -62,14 +65,14 @@ def get_similar_text_to_vector(query: str, collection, wm, fashion_clip_emb):
     return result
 
 
-def get_clothes_associated_to_look(tenueId: str, certainty: float, collection, wm):
+def get_clothes_associated_to_look(tenueId: str, certainty: float, collection: str, params: List[Any])-> np.array:
     """
     Get the clothes associated to a look.
     input: look uuid, Weaviate collection
     output: Weaviate query result
     """  
     t1 = perf_counter()
-    result = wm.query_item_by_fetch(
+    result = params.wm.query_item_by_fetch(
         collection_name=collection,
         query_property="origImageId",
         query_value=tenueId,
@@ -92,29 +95,50 @@ def get_clothes_associated_to_look(tenueId: str, certainty: float, collection, w
     return reco_list
 
 
-def get_similar_vector_to_vector(query, reco_list: np.array, collection, wm):
+def get_similar_vector_to_vector(query, reco_list: np.array, collection: str, params: List[Any])-> np.array:
+    """
+    Get the most similar item to the image vector query.
+    input: image vector query, Weaviate collection
+    output: Weaviate query result
+    """   
     # get similar item from outfit's item reference
     similar_clothes_list = []
     t1 = perf_counter()
     for outfit in reco_list:
         for item in outfit:
-            #similar_clothes = wm.search_by_vector(item["vectorFClip"], collection, "embedding_fashionclip")
-            similar_clothes = wm.search_hybrid(
-                query=query,
-                query_vector=item["vectorFClip"],
-                collection_name=collection,
-                target_vector="embedding_fashionclip",
-                query_properties=["product_type_original","colour_original"],
-                alpha=0.5,
-                limit=3,
-            )
+            if params.type_of_query == "Hybrid":
+                similar_clothes = params.wm.search_hybrid(
+                    query=query,
+                    query_vector=item["vectorFClip"],
+                    collection_name=collection,
+                    target_vector="embedding_fashionclip",
+                    query_properties=["product_type_original","colour_original"],
+                    alpha=0.5,
+                    limit=3,
+                )
+            else: 
+                similar_clothes = params.wm.search_by_vector(
+                    query_vector=item["vectorFClip"],
+                    collection_name=collection,
+                    target_vector="embedding_fashionclip",
+                    limit=3,
+
+                )
+            
             for cloth in similar_clothes.objects:
                 similar_clothes_list.append({
                     "tenueId": item["tenueId"],
                     "imageId": item["imageId"],
+                    "categoryName": item['categoryName'], 
                     "cloth_path": cloth.properties['image_path'],
-                    "certainty": (cloth.metadata.certainty + item["certainty"]) /2
+                    "certainty": (
+                            (item["certainty"] + cloth.metadata.certainty) / 2
+                            if cloth.metadata.certainty is not None
+                            else item["certainty"]
+                        )
                 })
+
+
     t2 = perf_counter()
     logger.info(f"get similar clothes: {t2 - t1:.4f} seconds")
     # Calculate best combination among outfit
@@ -134,20 +158,21 @@ def get_similar_vector_to_vector(query, reco_list: np.array, collection, wm):
         for combo in all_combinations:
             certainties = [filtered_data[i]["certainty"] for i in combo]
             paths = [filtered_data[i]["cloth_path"] for i in combo]
+            category = [filtered_data[i]["categoryName"] for i in combo]
             total_certainty = sum(certainties)/len(certainties)
 
-            results.append({"combo": combo, "cloth_path": paths, "totalcertainty": total_certainty})
+            results.append({"combo": combo, "cloth_path": paths, "category": category, "totalcertainty": total_certainty})
 
     # Get best recommended outfit
     best_outfit = sorted(results, key=lambda x: x["totalcertainty"], reverse=True)[:3]
-
+    logger.info(best_outfit)
     t3 = perf_counter()
     logger.info(f"get best outfit: {t3 - t2:.4f} seconds")
     return best_outfit
 
 
 
-def algo_flow(wm, query, image, tenues_col, vet_col, cat_col, fashion_clip_emb )-> np.array:
+def algo_flow(query: str, image: Any, params: List[Any])-> np.array:
     t1 = perf_counter()
     logger.info(query)
     if query != ["Need clarification"]:
@@ -156,41 +181,33 @@ def algo_flow(wm, query, image, tenues_col, vet_col, cat_col, fashion_clip_emb )
     
     if "flow1" in query[0]:
         # search corresponding outfit in trendy outfit database
-        matching_outfit = get_similar_text_to_vector(cleaned_query, tenues_col, wm, fashion_clip_emb)
+        matching_outfit = get_similar_text_to_vector(cleaned_query, params.tenues_col, params)
         logger.info(f"Matching outfit found: {matching_outfit}")
         reco_list = []
         # Get the items from the selected outfit
         for o in matching_outfit.objects:
             tenue_id = o.properties['tenueId']
-            reco_list.append(get_clothes_associated_to_look(tenue_id, o.metadata.certainty, vet_col, wm))
+            reco_list.append(get_clothes_associated_to_look(tenue_id, o.metadata.certainty, params.vet_col, params))
 
         # Search in catalogue the similar clothing items (by vectorFClip)
-        best_outfit = get_similar_vector_to_vector(cleaned_query, reco_list, cat_col, wm)
+        best_outfit = get_similar_vector_to_vector(cleaned_query, reco_list, params.cat_col, params)
 
         recommended_items = best_outfit
 
 
     elif "flow2" in query[0]:
-        logger.info(image)
         if image != None:
-            # Get the vector description of the existing clothing item
-            # vectorized_image = vectorize_image(image) if image else None
-            
+            # Get the vector description of the existing clothing item            
             vectorize_image = vectorize_query(image)
-
-            # search outfit in trendy outfit database (hybrid search)
-            # Get 3 matching outfits
-
-            # Get the vector description of the wanted clothing item
 
             # Search in catalogue
             similar_clothes_list = []
             logger.info(vectorize_image)
             
-            similar_clothes = wm.search_hybrid(
+            similar_clothes = params.wm.search_hybrid(
                 query=cleaned_query,
                 query_vector=vectorize_image,
-                collection_name=cat_col,
+                collection_name=params.cat_col,
                 target_vector="embedding_fashionclip",
                 query_properties=["product_type_original","colour_original"],
                 alpha=0.5,
@@ -210,7 +227,7 @@ def algo_flow(wm, query, image, tenues_col, vet_col, cat_col, fashion_clip_emb )
 
     elif "flow3" in query[0]:
         # Search directly in catalogue
-        result = get_similar_text_to_vector(cleaned_query, cat_col, wm, fashion_clip_emb)
+        result = get_similar_text_to_vector(cleaned_query, params.cat_col, params)
         reco_list=[]
         for item in result.objects:
             reco_list.append({                    
