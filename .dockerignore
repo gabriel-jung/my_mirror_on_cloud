@@ -1,0 +1,12 @@
+data/
+notebooks/
+tests/
+results/
+scripts/
+*.log
+*.pyc
+__pycache__/
+.env
+.env-yaml
+.vscode/
+.git/

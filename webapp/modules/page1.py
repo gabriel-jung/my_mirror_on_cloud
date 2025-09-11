@@ -3,12 +3,13 @@ from PIL import Image
 import time
 
 # ou plus précis
-from src.my_mirror_on_cloud.streamlit_pipeline import (
+from my_mirror_on_cloud.streamlit_pipeline import (
     init_model,
     search_recommended_outfit,
 )
 
-from webapp.scripts.load_image import get_url_from_image_path, load_image_from_url
+from scripts.load_image import get_url_from_image_path, load_image_from_url
+
 
 def show():
     if "show_outfits" not in st.session_state:
@@ -26,7 +27,6 @@ def show():
 
     # taille des colonnes
     col1, col2 = st.columns([1, 2], border=True)
-    
 
     with col1:
         st.session_state.uploaded_file = st.file_uploader(
@@ -68,7 +68,7 @@ def show():
 
         with st.form("user_profile_form"):
             with st.expander("Your profile"):
-                age = st.slider("Age", min_value=0, max_value=120, value=25)
+                # age = st.slider("Age", min_value=0, max_value=120, value=25)
                 gender = st.selectbox("Gender", options=["Male", "Female", "Other"])
 
             st.markdown(
@@ -92,16 +92,20 @@ def show():
             if submitted:
                 st.session_state.show_outfits = True
                 st.session_state.outfit_choice = None
-                success = st.success("Profile information submitted successfully!", icon="✅")
+                success = st.success(
+                    "Profile information submitted successfully!", icon="✅"
+                )
                 # Launch search_recommended_outfit
-                st.session_state.recommended_outfit = search_recommended_outfit(f"{query}. I'm a {gender}.", image, st.session_state.init_model)
+                st.session_state.recommended_outfit = search_recommended_outfit(
+                    f"{query}. I'm a {gender}.", image, st.session_state.init_model
+                )
                 with st.expander("Afficher l'array", expanded=False):
                     st.write(st.session_state.recommended_outfit)
 
     if st.session_state.show_outfits:
         if st.session_state.outfit_choice is None:
             if st.session_state.recommended_outfit is not None:
-                with st.spinner("Finding the perfect outfit for you... ⏳"):  
+                with st.spinner("Finding the perfect outfit for you... ⏳"):
                     st.balloons()
                     success.empty()
 
@@ -118,7 +122,7 @@ def show():
 
                         # Choisir la colonne de manière alternée
                         col = cols[i % 2]
-                        
+
                         # Afficher l'image
                         col.image(img, channels="RGB")
                 with col2:
@@ -132,7 +136,7 @@ def show():
 
                         # Choisir la colonne de manière alternée
                         col = cols[i % 2]
-                        
+
                         # Afficher l'image
                         col.image(img, channels="RGB")
                 with col3:
@@ -146,7 +150,7 @@ def show():
 
                         # Choisir la colonne de manière alternée
                         col = cols[i % 2]
-                        
+
                         # Afficher l'image
                         col.image(img, channels="RGB")
 
@@ -156,12 +160,20 @@ def show():
                     outfit_choice = st.radio(
                         "Select an outfit", options=["Outfit 1", "Outfit 2", "Outfit 3"]
                     )
-                    st.session_state.outfit_choice = [outfit_choice, st.session_state.recommended_outfit[options.index(outfit_choice)]["cloth_path"]]
+                    st.session_state.outfit_choice = [
+                        outfit_choice,
+                        st.session_state.recommended_outfit[
+                            options.index(outfit_choice)
+                        ]["cloth_path"],
+                    ]
                     submitted_choice = st.form_submit_button("Submit")
 
                     if submitted_choice:
                         st.success(f"You have selected {outfit_choice}!")
-                        st.write(st.session_state.outfit_choice[0], st.session_state.outfit_choice[1])
+                        st.write(
+                            st.session_state.outfit_choice[0],
+                            st.session_state.outfit_choice[1],
+                        )
                         img.markdown(
                             """
                             <div style="
@@ -186,6 +198,6 @@ def show():
                                 caption="Your new outfit",
                                 width=200,
                             )
-                
+
             else:
                 st.warning("Request need clarification")
