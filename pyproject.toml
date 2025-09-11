@@ -22,6 +22,7 @@ dependencies = [
     "langid (>=1.1.6,<2.0.0)",
     "sentencepiece (>=0.2.1,<0.3.0)",
     "sacremoses (>=0.1.1,<0.2.0)",
+    "streamlit (>=1.49.1,<2.0.0)",
 ]
 
 [tool.poetry]

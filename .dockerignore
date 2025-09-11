@@ -1,3 +1,7 @@
+.venv/
+dist/
+*.egg-info/
+build/
 data/
 notebooks/
 tests/
