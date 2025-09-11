@@ -234,6 +234,34 @@ class WeaviateManager:
             return_metadata=MetadataQuery(certainty=True, distance=True),
         )
         return results
+    
+    def search_hybrid(
+            self,
+            query: str,
+            query_vector: Union[List[float], NDArray],
+            collection_name: str,
+            target_vector: str,
+            query_properties: List[str],
+            alpha: float = 0.5,
+            limit: int = 5,
+    ):
+        """Search collection using hybrid search (vector + properties)"""
+        if not self.is_connected():
+            raise ConnectionError("No active connection to Weaviate")
+        
+        collection = self.client.collections.use(collection_name)
+        results = collection.query.hybrid(
+            query=query,
+            vector=query_vector,
+            target_vector=target_vector,
+            alpha=alpha,
+            limit=limit,
+            query_properties=query_properties,
+            return_metadata=MetadataQuery(score=True, explain_score=True),
+        )
+        return results
+
+
 
     def search_hybrid(
         self,

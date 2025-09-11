@@ -4,29 +4,20 @@ from .catalogue_search import (
     connect_collection,
 )
 from .manage_language import init_language, translate_to_en
+from .weaviate_manager import WeaviateManager
+from .embedding_manager import create_embedder 
 
 
 def init_model():
-    # Weaviate
-    #client = weaviate_connect()
+    wm = WeaviateManager()
     tenues_collection, clothes_collection, catalogue_collection = connect_collection()
-
-    # FashionClip
-
-    # description de Gabriel
-
-    # language
+    fashion_clip_emb = create_embedder()
     model_lang, tokenizer_lang = init_language()
-
-    return tenues_collection, clothes_collection, catalogue_collection,  model_lang, tokenizer_lang
-
+    return wm, tenues_collection, clothes_collection, catalogue_collection,  model_lang, tokenizer_lang, fashion_clip_emb
 
 
-
-def search_recommended_outfit(query, tenues_collection, clothes_collection, catalogue_collection, model_lang, tokenizer_lang):
-    trad_query = translate_to_en(query, model_lang, tokenizer_lang)
+def search_recommended_outfit(query, img_path, init_model):
+    trad_query = translate_to_en(query, init_model[4], init_model[5])
     cleaned_query = reformulation_query(trad_query)
-  
-    #recommended_objects = get_similar_text_to_vector(cleaned_query, collection)
-    recommended_objects = algo_flow(cleaned_query, tenues_collection, clothes_collection, catalogue_collection)
+    recommended_objects = algo_flow(init_model[0], cleaned_query, img_path, init_model[1], init_model[2], init_model[3], init_model[6])
     return recommended_objects
