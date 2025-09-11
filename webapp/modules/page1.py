@@ -3,12 +3,32 @@ from PIL import Image
 from streamlit_extras.let_it_rain import rain
 
 # ou plus précis
-from src.my_mirror_on_cloud.streamlit_pipeline import (
+from my_mirror_on_cloud.streamlit_pipeline import (
     init_model,
     search_recommended_outfit,
 )
 
-from webapp.scripts.load_image import get_url_from_image_path, load_image_from_url
+from scripts.load_image import get_url_from_image_path, load_image_from_url
+
+
+def rain_clothes():
+    rain(
+        emoji="👗     👕",
+        font_size=84,
+        falling_speed=10,
+        animation_length=1,
+    )
+
+def display_clothes(outfit):
+    options = ["Outfit 1", "Outfit 2", "Outfit 3"]
+    st.subheader(options[outfit])
+    images = st.session_state.recommended_outfit[outfit]["cloth_path"]
+    cols = st.columns(2)
+    for i, path in enumerate(images):  # max 3 images
+        image_url = get_url_from_image_path(path)
+        img = load_image_from_url(image_url)
+        col = cols[i % 2]
+        col.image(img, channels="RGB")
 
 def rain_clothes():
     rain(

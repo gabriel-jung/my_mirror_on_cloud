@@ -1,0 +1,16 @@
+.venv/
+dist/
+*.egg-info/
+build/
+data/
+notebooks/
+tests/
+results/
+scripts/
+*.log
+*.pyc
+__pycache__/
+.env
+.env-yaml
+.vscode/
+.git/

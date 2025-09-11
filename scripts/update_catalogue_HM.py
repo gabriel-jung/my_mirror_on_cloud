@@ -106,7 +106,7 @@ def create_dynamic_properties(nonvector_keys):
     return properties
 
 
-def create_dynamic_vector_configs(vector_keys):
+def create_dynamic_vector_configs(vector_keys, nonvector_keys=[]):
     """Create vector configurations dynamically based on available keys."""
     vector_configs = []
     for key in vector_keys:
@@ -118,6 +118,17 @@ def create_dynamic_vector_configs(vector_keys):
                 ),
             )
         )
+    for key in nonvector_keys:
+        if "description" in key:
+            model_name = key.replace("description_", "")
+            vector_configs.append(
+                wc.Configure.Vectors.text2vec_weaviate(
+                    name="embedding_description_" + model_name + "_snowflake",
+                    model="Snowflake/snowflake-arctic-embed-l-v2.0",
+                    source_properties=[key],
+                )
+            )
+    print(vector_configs)
     return vector_configs
 
 
@@ -135,7 +146,7 @@ def create_and_populate_collection(
             collection_name=collection_name,
             force_creation=True,
             properties=create_dynamic_properties(nonvector_keys),
-            vector_config=create_dynamic_vector_configs(vector_keys),
+            vector_config=create_dynamic_vector_configs(vector_keys, nonvector_keys),
         )
 
         logger.info("📦 Starting batch insertion")
@@ -145,7 +156,7 @@ def create_and_populate_collection(
             weaviate.batch_insert_objects_to_collection(
                 collection_name=collection_name,
                 objects_data=formatted_data,
-                batch_size=100,
+                batch_size=200,
                 show_progress=True,
             )
             logger.info("✅ Batch insertion completed successfully")

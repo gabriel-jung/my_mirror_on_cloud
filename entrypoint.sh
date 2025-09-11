@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "Starting Streamlit on port $PORT"
+streamlit run webapp/app.py --server.port=$PORT --server.address=0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false

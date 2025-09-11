@@ -234,21 +234,21 @@ class WeaviateManager:
             return_metadata=MetadataQuery(certainty=True, distance=True),
         )
         return results
-    
+
     def search_hybrid(
-            self,
-            query: str,
-            query_vector: Union[List[float], NDArray],
-            collection_name: str,
-            target_vector: str,
-            query_properties: List[str],
-            alpha: float = 0.5,
-            limit: int = 5,
+        self,
+        query: str,
+        query_vector: Union[List[float], NDArray],
+        collection_name: str,
+        target_vector: str,
+        query_properties: List[str],
+        alpha: float = 0.5,
+        limit: int = 5,
     ):
         """Search collection using hybrid search (vector + properties)"""
         if not self.is_connected():
             raise ConnectionError("No active connection to Weaviate")
-        
+
         collection = self.client.collections.use(collection_name)
         results = collection.query.hybrid(
             query=query,
@@ -260,8 +260,6 @@ class WeaviateManager:
             return_metadata=MetadataQuery(score=True, explain_score=True),
         )
         return results
-
-
 
     def get_properties_of_collection(self, collection_name: str) -> List[str]:
         """Get properties of a specific collection"""
@@ -284,7 +282,7 @@ class WeaviateManager:
         """Query items in a collection based on a property value"""
         if not self.is_connected():
             raise ConnectionError("No active connection to Weaviate")
-        
+
         collection = self.client.collections.use(collection_name)
         result = collection.query.get(
             where={
@@ -302,7 +300,7 @@ class WeaviateManager:
         collection_name: str,
         query_property: str,
         query_value: str,
-        limit: int=5,
+        limit: int = 5,
     ):
         """Query items in a collection based on a property value"""
         if not self.is_connected():
@@ -312,8 +310,8 @@ class WeaviateManager:
         result = collection.query.fetch_objects(
             filters=Filter.by_property(query_property).equal(query_value),
             limit=3,
-            include_vector=True
-        )    
+            include_vector=True,
+        )
 
         return result
 

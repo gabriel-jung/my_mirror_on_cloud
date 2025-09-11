@@ -69,14 +69,17 @@ class FashionCLIPEmbedder(ClothingImageEmbedder):
     def _load_model(self):
         """Load FashionCLIP model."""
         try:
+            logger.info("Loading FashionCLIP model...")
             self.model = FashionCLIP("fashion-clip")
+
             if self.use_float16:
                 self.model.model.half()
-                print("FashionCLIP loaded with float16 precision")
+                logger.success("FashionCLIP loaded with float16")
             else:
-                self.model.model.float()
-                print("FashionCLIP loaded with float32 precision")
+                logger.info("FashionCLIP loaded with float32")
+
         except Exception as e:
+            logger.error(f"Failed to load model: {e}")
             raise RuntimeError(f"Failed to load FashionCLIP model: {e}")
 
     def encode_texts(

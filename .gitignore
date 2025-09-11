@@ -6,6 +6,7 @@ __pycache__/
 env/
 venv/
 .env
+.env.yaml
 .venv
 pip-log.txt
 pip-delete-this-directory.txt
