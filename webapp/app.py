@@ -4,13 +4,17 @@ import os
 import sys
 
 from modules import page1, page2
+from loguru import logger
 
-
-print("CWD:", os.getcwd())
-print("PATH:", sys.path[:5])
+logger.info("CWD:", os.getcwd())
+logger.info("PATH:", sys.path[:5])
 
 
 def main():
+    with st.sidebar:
+        st.session_state.type_of_query = st.sidebar.selectbox(
+            "How do you want search an outfit?", ("One vector", "Hybrid"), index=0
+        )
     st.set_page_config(page_title="My Mirror on Cloud", layout="wide")
     tab1, tab2, tab3 = st.tabs(["App", "More information", "ChatBot"])
     with tab1:

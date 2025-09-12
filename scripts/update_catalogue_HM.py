@@ -128,7 +128,6 @@ def create_dynamic_vector_configs(vector_keys, nonvector_keys=[]):
                     source_properties=[key],
                 )
             )
-    print(vector_configs)
     return vector_configs
 
 

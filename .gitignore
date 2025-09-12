@@ -21,3 +21,7 @@ models/downloaded/
 data/*
 results/*
 *.log
+models/
+
+cloth.*
+output.*
