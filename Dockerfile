@@ -20,8 +20,6 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
-COPY ./models /app/models
-ENV HF_HOME="/app/models"
 
 ENV PYTHONPATH="/app/src"
 

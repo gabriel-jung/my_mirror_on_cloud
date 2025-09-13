@@ -16,7 +16,7 @@ def main():
             "How do you want search an outfit?", ("One vector", "Hybrid"), index=0
         )
     st.set_page_config(page_title="My Mirror on Cloud", layout="wide")
-    tab1, tab2, tab3 = st.tabs(["App", "More information", "ChatBot"])
+    tab1, tab2 = st.tabs(["App", "More information"])
     with tab1:
         page1.show()
 

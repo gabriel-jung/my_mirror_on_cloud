@@ -1,6 +1,8 @@
 """Handles embedding operations for text and images."""
 
 import time
+import os
+from dotenv import load_dotenv, find_dotenv
 import numpy as np
 from typing import List, Optional, Any, Union
 from datetime import datetime, timezone
@@ -298,6 +300,13 @@ def create_embedder(
 ) -> ClothingImageEmbedder:
     """Factory function to create appropriate embedder."""
 
+    env_path = find_dotenv()
+    load_dotenv(env_path)
+    HF_HUB_OFFLINE = os.environ.get("HF_HUB_OFFLINE")
+    HF_HOME = os.environ.get("HF_HOME")
+    print("HF_HUB_OFFLINE", HF_HUB_OFFLINE)
+    print("HF_HOME", HF_HOME)
+
     if model_name == "fashion-clip":
         return FashionCLIPEmbedder(model_name, **kwargs)
     elif model_name in ["vit_base_patch16_224", "vit_large_patch16_224"]:
@@ -322,7 +331,7 @@ def vectorize_images(
 
     try:
         # Create embedder
-        #embedder = create_embedder(model_name, use_float16=use_float16)
+        # embedder = create_embedder(model_name, use_float16=use_float16)
 
         # Handle single image path
         if isinstance(image_paths, str):

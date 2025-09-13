@@ -8,8 +8,7 @@ from time import perf_counter
 
 from typing import List, Any
 
-from .embedding_manager import vectorize_texts
-from .encode_query import vectorize_query
+from .embedding_manager import vectorize_texts, vectorize_images
 
 
 logger = loguru.logger
@@ -195,14 +194,14 @@ def algo_flow(query: str, image: Any, params: List[Any]) -> np.array:
     logger.info(query)
     if query != ["Need clarification"]:
         try:
-            cleaned_query = query[0].lower().split("flow", 1)[1].strip()
+            cleaned_query = query.lower().split("flow", 1)[1].strip()
         except IndexError:
-            cleaned_query = query[0].lower()
+            cleaned_query = query.lower()
         logger.info(f"Cleaned query: {cleaned_query}")
     else:
         return None
 
-    if "flow1" in query[0]:
+    if "flow1" in query:
         # search corresponding outfit in trendy outfit database
         matching_outfit = get_similar_text_to_vector(
             cleaned_query, params.tenues_col, params
@@ -225,10 +224,13 @@ def algo_flow(query: str, image: Any, params: List[Any]) -> np.array:
 
         recommended_items = best_outfit
 
-    elif "flow2" in query[0]:
+    elif "flow2" in query:
         if image is not None:
             # Get the vector description of the existing clothing item
-            vectorize_image = vectorize_query(image)
+            # vectorize_image = vectorize_query(image)
+            vectorize_image = vectorize_images(
+                params.fashion_clip_emb, [image], model_name="fashion-clip"
+            )[0]["embedding"]
 
             # Search in catalogue
             similar_clothes_list = []
@@ -257,7 +259,7 @@ def algo_flow(query: str, image: Any, params: List[Any]) -> np.array:
         else:
             recommended_items = "Need picture"
 
-    elif "flow3" in query[0]:
+    elif "flow3" in query:
         # Search directly in catalogue
         result = get_similar_text_to_vector(cleaned_query, params.cat_col, params)
         reco_list = []

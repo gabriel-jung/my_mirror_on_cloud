@@ -80,46 +80,60 @@ def show():
         )
 
         query = st.text_area("Describe your desired outfit or occasion", height=100)
-        submitted = st.form_submit_button("Submit")
 
         # My profile
-        expander = st.expander("My profile")
-        age = expander.slider("Age", min_value=0, max_value=120, value=25)
-        gender = expander.selectbox("Gender", options=["Male", "Female", "Other"])
-        st.session_state.uploaded_file = expander.file_uploader(
-            "Upload an image of you today", type=["png", "jpg", "jpeg"]
-        )
+        columns = st.columns(2)
+        with columns[0]:
+            expander = st.expander("My profile", expanded=False)
+            age = expander.slider("Age", min_value=0, max_value=120, value=25)
+            gender = expander.selectbox("Gender", options=["Male", "Female", "Other"])
+        with columns[1]:
+            expander = st.expander("Your picture", expanded=False)
+            st.session_state.uploaded_file = expander.file_uploader(
+                "Upload an image of you today", type=["png", "jpg", "jpeg"]
+            )
 
-        # Display image placeholder initially
-        img = expander.empty()
-        img.markdown(
-            """
-            <div style="
-                width:200px;
-                height:200px;
-                border:2px dashed #888;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                color:#888;
-                border-radius:10px;
-            ">
-                En attente d'image
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            # Display image placeholder initially
+            img = expander.empty()
+            img.markdown(
+                """
+                <div style="
+                    width:200px;
+                    height:200px;
+                    border:2px dashed #888;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:#888;
+                    border-radius:10px;
+                ">
+                    Waiting for image
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        # When user uploads a file
-        if st.session_state.uploaded_file:
-            # Show spinner during image loading
-            with st.spinner("Uploading image... ⏳"):
-                st.session_state.image = Image.open(st.session_state.uploaded_file)
+            # When user uploads a file
+            if st.session_state.uploaded_file:
+                # Show spinner during image loading
+                with st.spinner("Uploading image... ⏳"):
+                    st.session_state.image = Image.open(st.session_state.uploaded_file)
 
-            # Then replace placeholder with the image
-            img.image(st.session_state.image, caption="Image uploadée", width=200)
+                # Then replace placeholder with the image
+                img.image(st.session_state.image, width=300)
 
-            st.success("Image uploaded successfully! ✅")
+                st.success("Image uploaded successfully! ✅")
+                # Save the uploaded person image temporarily
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=".png"
+                ) as tmp_person:
+                    st.session_state.image.save(tmp_person.name)
+                    person_img_path = tmp_person.name
+                    logger.info(
+                        f"Saved uploaded person image to temporary file: {person_img_path}"
+                    )
+
+        submitted = st.form_submit_button("Submit")
 
         if submitted:
             st.session_state.show_outfits = True
@@ -130,7 +144,7 @@ def show():
             # Launch search_recommended_outfit
             st.session_state.recommended_outfit = search_recommended_outfit(
                 f"{query}. I'm a {gender} and I am {age}",
-                st.session_state.image,
+                person_img_path if st.session_state.image is not None else None,
                 st.session_state.init_model,
                 st.session_state.type_of_query,
             )
@@ -168,22 +182,9 @@ def show():
 
                     if submitted_choice:
                         save_cloth_images(options.index(outfit_choice))
-                        st.write(
-                            outfit_choice,
-                            "cloth.jpg",
-                        )
 
                         if st.session_state.image is not None:
                             try:
-                                # Save the uploaded person image temporarily
-                                with tempfile.NamedTemporaryFile(
-                                    delete=False, suffix=".png"
-                                ) as tmp_person:
-                                    st.session_state.image.save(tmp_person.name)
-                                    person_img_path = tmp_person.name
-                                    logger.info(
-                                        f"Saved uploaded person image to temporary file: {person_img_path}"
-                                    )
                                 cloth_img_path = "cloth.jpg"
 
                                 try:
@@ -200,7 +201,7 @@ def show():
                                         st.image(
                                             output_img_path,
                                             caption="Your new outfit",
-                                            width=200,
+                                            width=300,
                                         )
                                     else:
                                         st.error(

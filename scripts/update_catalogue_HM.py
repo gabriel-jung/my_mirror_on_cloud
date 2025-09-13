@@ -55,6 +55,8 @@ def format_data_for_weaviate(all_data):
     logger.info(f"📋 Formatting {len(all_data)} items for Weaviate")
 
     unique_keys = get_unique_keys(all_data)
+    unique_keys = [key for key in unique_keys if "vit_" not in key]
+
     vector_keys = [
         clean_name(key) for key in unique_keys if key.startswith("embedding_")
     ]
