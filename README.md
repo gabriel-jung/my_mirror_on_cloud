@@ -1,9 +1,17 @@
 # My Mirror on Cloud
 
-Quick Description...
+My Mirror on Cloud
+
+My Mirror on Cloud is a Python package with a Streamlit interface that together form a fashion recommendation engine.
+
+A catalogue of images—here using the H&M dataset from Kaggle—can be analyzed using powerful encoder models or multimodal Large Language Models (LLMs) accessible via Ollama. The main models used are FashionCLIP and Qwen2.5-VL. The encoded representations are stored in a vector database powered by Weaviate, enabling fast and accurate nearest vector searches.
+
+User requests are processed through LLMs for intelligent formatting and interpretation, distinguishing whether a single clothing item is desired or a coordinated outfit for a particular occasion.
 
 ## Features
-- ....
+- Embedding of clothing images and descriptions
+- Storage of tags and vectors in a SQL-based system
+- Efficient nearest vector search via Weaviate
 
 ## Requirements
 - Python 3.12

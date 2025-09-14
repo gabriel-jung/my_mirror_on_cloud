@@ -1,6 +1,5 @@
 """Catalogue search module on Weaviate's vector database."""
 
-import loguru
 import numpy as np
 from collections import defaultdict
 from itertools import product
@@ -10,8 +9,7 @@ from typing import List, Any
 
 from .embedding_manager import vectorize_texts, vectorize_images
 
-
-logger = loguru.logger
+from loguru import logger
 
 
 def connect_collection() -> List[str]:
@@ -189,7 +187,7 @@ def get_similar_vector_to_vector(
     return best_outfit
 
 
-def algo_flow(query: str, image: Any, params: List[Any]) -> np.array:
+def algo_flow(query: str, image: Any, params: List[Any]) -> List[Any]:
     t1 = perf_counter()
     logger.info(query)
     if query != ["Need clarification"]:
@@ -278,16 +276,3 @@ def algo_flow(query: str, image: Any, params: List[Any]) -> np.array:
     t2 = perf_counter()
     logger.info(f"######## TOTAL Time: {t2 - t1:.4f} seconds #######")
     return recommended_items
-
-
-if __name__ == "__main__":
-    t1 = perf_counter()
-    tenues_collection, clothes_collection, catalogue_collection = connect_collection()
-    t2 = perf_counter()
-    logger.info(f"connect to weaviate: {t2 - t1:.4f} seconds")
-
-    query = "flow1: a casual woman outfit for summer"
-    result = algo_flow(
-        query, tenues_collection, clothes_collection, catalogue_collection
-    )
-    logger.info(result)

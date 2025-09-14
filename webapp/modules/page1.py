@@ -61,14 +61,14 @@ def show():
         st.session_state.recommended_outfit = None
 
     st.title("**Welcome to My Mirror on Cloud!**")
-    st.subheader("This application recommends you outfits based on your requests")
+    st.subheader("This application recommends you outfits based on your preferences.")
 
     with st.form("user_profile_form"):
         st.markdown(
             """
             <div style="display:flex; align-items:center;">
                 <h3 style="margin:0;">What are you looking for?</h3>
-                <span title="Exemple :
+                <span title="Example:
                 - Casual outfit for a day out with friends
                 - Formal attire for a wedding
                 - I'm looking for a summer dress for a beach vacation
@@ -79,7 +79,10 @@ def show():
             unsafe_allow_html=True,
         )
 
-        query = st.text_area("Describe your desired outfit or occasion", height=100)
+        query = st.text_area(
+            "ℹ️ Describe the cloth, the outfit or the occasion you have in mind",
+            height=100,
+        )
 
         # My profile
         columns = st.columns(2)
@@ -90,7 +93,7 @@ def show():
         with columns[1]:
             expander = st.expander("Your picture", expanded=False)
             st.session_state.uploaded_file = expander.file_uploader(
-                "Upload an image of you today", type=["png", "jpg", "jpeg"]
+                "Upload a current image of yourself:", type=["png", "jpg", "jpeg"]
             )
 
             # Display image placeholder initially
@@ -138,9 +141,7 @@ def show():
         if submitted:
             st.session_state.show_outfits = True
             st.session_state.outfit_choice = None
-            success = st.success(
-                "Profile information submitted successfully!", icon="✅"
-            )
+            success = st.success("Information submitted successfully!", icon="✅")
             # Launch search_recommended_outfit
             st.session_state.recommended_outfit = search_recommended_outfit(
                 f"{query}. I'm a {gender} and I am {age}",
@@ -156,7 +157,7 @@ def show():
     if st.session_state.show_outfits:
         if st.session_state.outfit_choice is None:
             if st.session_state.recommended_outfit == "Need picture":
-                st.warning("Add a picture of you")
+                st.warning("Add your picture above")
                 st.session_state.recommended_outfit = None
             if st.session_state.recommended_outfit is not None:
                 with st.spinner("Finding the perfect outfit for you... ⏳"):
@@ -174,7 +175,7 @@ def show():
                     display_clothes(2)
 
                 # ask choose one outfit
-                st.markdown("### Choose your favorite outfit:")
+                st.markdown("### Choose your favorite outfit for virtual try-on:")
                 options = ["Outfit 1", "Outfit 2", "Outfit 3"]
                 with st.form("choice_form"):
                     outfit_choice = st.radio("Select an outfit", options=options)

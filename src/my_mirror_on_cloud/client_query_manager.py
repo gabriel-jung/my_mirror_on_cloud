@@ -76,14 +76,7 @@ def reformulation_query(query: str) -> dict:
     t1 = perf_counter()
     response = llm_query_openai(role_system, user_query)
     t2 = perf_counter()
-    # clean_response = re.sub(
-    #     r"^```json\s*|```$", "", response, flags=re.MULTILINE
-    # ).strip()
-    # logger.info(clean_response)
-    # arr = json.loads(clean_response)
-    # logger.info(arr)
     logger.info(f"Response time: {t2 - t1:.2f} seconds")
-    # return arr
     return response
 
 

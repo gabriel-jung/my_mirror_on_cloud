@@ -3,7 +3,7 @@ import streamlit as st
 import os
 import sys
 
-from modules import page1, page2
+from modules import page1
 from loguru import logger
 
 logger.info("CWD:", os.getcwd())
@@ -16,12 +16,13 @@ def main():
             "How do you want search an outfit?", ("One vector", "Hybrid"), index=0
         )
     st.set_page_config(page_title="My Mirror on Cloud", layout="wide")
-    tab1, tab2 = st.tabs(["App", "More information"])
-    with tab1:
-        page1.show()
+    page1.show()
+    # tab1, tab2 = st.tabs(["App", "More information"])
+    # with tab1:
+    #     page1.show()
 
-    with tab2:
-        page2.show()
+    # with tab2:
+    #     page2.show()
 
     # with tab3:
     #     chatbot.show_chatbot()
