@@ -13,8 +13,6 @@ An AI-powered fashion recommendation engine to help users discover similar cloth
 
 *Note: This demonstration showcases the recommendation engine built during the Artefact Data Science bootcamp. The application is no longer hosted due to infrastructure costs.*
 
-My Mirror on Cloud is a Python package with a Streamlit interface that together form a fashion recommendation engine.
-
 ## 🎯 Project Overview
 
 My Mirror on Cloud is a Python package with a Streamlit interface that forms an intelligent fashion recommendation system. Using the [H&M dataset](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations/data) from Kaggle, the system analyzes fashion items through FashionCLIP, a specialized encoder model for fashion image understanding.
