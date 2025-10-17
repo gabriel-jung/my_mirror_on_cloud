@@ -12,6 +12,7 @@ An AI-powered fashion recommendation engine to help users discover similar cloth
 *Left: Search for full outfit | Right: Virtual try-on with CatVTON*
 
 *Note: This demonstration showcases the recommendation engine built during the Artefact Data Science bootcamp. The application is no longer hosted due to infrastructure costs.*
+
 My Mirror on Cloud is a Python package with a Streamlit interface that together form a fashion recommendation engine.
 
 ## 🎯 Project Overview
